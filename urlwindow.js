@@ -52,7 +52,7 @@ class UrlWindow {
               };
        };   
       
-    ge      tSliderTooCloseToEnding = (window) => {
+    getSliderTooCloseToEnding = (window) => {
               let last = this.paginator.getUrlRange(
                 this.getLastPage() - (window + 2),
               this.getLastPage()
