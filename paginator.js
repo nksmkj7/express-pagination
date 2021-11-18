@@ -1,4 +1,4 @@
-const { parseSqlResultToJson, renderFile } = require("../Helper");
+const { parseSqlResultToJson, renderFile } = require("../CommonHelper");
 const UrlWindow = require("./urlwindow");
 
 class Paginator {
@@ -17,7 +17,7 @@ class Paginator {
         );
         this.currentPage = this.currentPage
             ? this.currentPage
-            : Number(Paginator.request.query.page) ?? 1;
+            : Number(Paginator.request.query.page ?? 1);
         this.onEachSide = this.onEachSide ?? 3;
     }
 
@@ -25,7 +25,7 @@ class Paginator {
         let items = await Paginator.getItems(
             query,
             perPage,
-            options.currentPage
+            Number(request.query.page ?? 1)
         );
         let total = Number(await Paginator.getTotal(query)) ?? 0;
         Paginator.request = request;
@@ -47,7 +47,6 @@ class Paginator {
 
     elements = () => {
         let window = UrlWindow.make(this);
-        console.log(window, "window is");
         return [
             window.first,
             window.slider ? "..." : null,
@@ -104,11 +103,21 @@ class Paginator {
     };
 
     static async getTotal(query) {
-        return parseSqlResultToJson(await global.mysql.sqlQuery(query)).length;
+        let queryArray = query.toLowerCase().split(" ");
+        let tableIndex = queryArray.indexOf("from") + 1;
+        let tableName = queryArray[queryArray.indexOf("from") + 1];
+        queryArray = queryArray.slice(tableIndex + 1);
+        let totalCountQuery = `SELECT COUNT(*) as total_count FROM ${tableName} ${queryArray.join(
+            " "
+        )}`;
+        return (
+            parseSqlResultToJson(
+                await global.mysql.sqlQuery(totalCountQuery)
+            )[0].total_count ?? 0
+        );
     }
 
     getUrlRange = (start, end) => {
-        console.log(start, end, "hello world");
         let urls = {};
         for (let i = start; i <= end; i++) {
             urls[`${i}`] = this.url(i);
@@ -125,6 +134,7 @@ class Paginator {
         for (const [key, value] of Object.entries(request.query)) {
             if (count == 0) url += `?${key}=${value}`;
             else url += `&${key}=${value}`;
+            count++;
         }
         return url;
     };
